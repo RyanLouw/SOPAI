@@ -1,0 +1,136 @@
+﻿@model SOPSearch.Web.Models.UploadViewModel
+
+@{
+    ViewData["Title"] = "Upload";
+}
+
+<h1 class="mb-3">Upload</h1>
+
+@Html.AntiForgeryToken()
+
+
+<form asp-action="Upload" method="post" enctype="multipart/form-data" class="mb-4">
+        
+    <div class="mb-3">
+        <label asp-for="File" class="form-label"></label>
+        <input asp-for="File" type="file" class="form-control" accept=".pdf,.docx" />
+        <span asp-validation-for="File" class="text-danger"></span>
+        <div id="fileSizeMsg" class="text-danger mt-1"></div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="SOPName" class="form-label"></label>
+        <input asp-for="SOPName" class="form-control" />
+        <span asp-validation-for="SOPName" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="DocLibLocation" class="form-label"></label>
+        <input asp-for="DocLibLocation" class="form-control" />
+        <span asp-validation-for="DocLibLocation" class="text-danger"></span>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Tags</label>
+        <div id="tagsContainer">
+            <div class="input-group mb-2 tag-row">
+                <input name="Tags[0]" class="form-control" />
+                <button type="button"
+                        class="btn btn-outline-danger"
+                        onclick="removeTag(this)">
+                    Remove
+                </button>
+            </div>
+        </div>
+
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary mt-2"
+                onclick="addTag()">
+            + Add Tag
+        </button>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Upload</button>
+    <a asp-action="Chat" class="btn btn-outline-secondary ms-2e">Go to Chat</a>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-danger">
+        <strong>Error:</strong> @Model.Error
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Result))
+{
+    <div class="alert alert-success">
+        <strong>Result:</strong>
+        <pre style="white-space: pre-wrap; margin:0;">@Model.Result</pre>
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        const fileInput = document.getElementById("File");
+        const sopNameInput = document.getElementById("SOPName");
+
+        const maxBytes = 4 * 1024 * 1024; // 4 MB
+        const error = document.getElementById("fileSizeError");
+        const msg = document.getElementById("fileSizeMsg");
+
+        fileInput?.addEventListener("change", function () {
+            const file = this.files && this.files.length ? this.files[0] : null;
+            if (!file) return;
+
+            msg.textContent = "";
+
+            if (file.size > maxBytes) {
+                msg.textContent = `File is too large. Max allowed size is ${Math.floor(maxBytes / (1024*1024))} MB.`;
+                fileInput.value = "";
+            }
+            else{
+                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+                if (!sopNameInput.value) {
+                    sopNameInput.value = nameWithoutExt;
+                }
+            }
+        });
+
+        let tagIndex = 1;
+        
+        function addTag() {
+            const container = document.getElementById('tagsContainer');
+            const index = container.children.length;
+
+            const div = document.createElement('div');
+            div.className = 'input-group mb-2 tag-row';
+
+            div.innerHTML = `
+                <input name="Tags[${index}]" class="form-control" />
+                <button type="button"
+                        class="btn btn-outline-danger"
+                        onclick="removeTag(this)">
+                    Remove
+                </button>
+            `;
+
+            container.appendChild(div);
+        }
+
+        function removeTag(button) {
+            const row = button.closest('.tag-row');
+            row.remove();
+            reindexTags();
+        }
+
+        function reindexTags() {
+            const rows = document.querySelectorAll('#tagsContainer .tag-row');
+            rows.forEach((row, index) => {
+                const input = row.querySelector('input');
+                input.name = `Tags[${index}]`;
+            });
+        }
+    </script>
+}

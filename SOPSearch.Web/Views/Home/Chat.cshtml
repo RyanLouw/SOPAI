@@ -1,0 +1,60 @@
+﻿@model SOPSearch.Web.Models.ChatViewModel
+
+@{
+    ViewData["Title"] = "Chat";
+}
+
+<h1 class="mb-3">Chat</h1>
+@Html.AntiForgeryToken()
+
+<form asp-action="Chat" method="post" class="mb-4 mb-3">
+        
+    <div class="mb-3">
+        <label asp-for="Question" class="form-label"></label>
+        <textarea asp-for="Question" class="form-control" rows="4"></textarea>
+        <span asp-validation-for="Question" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="SelectedTagSource" class="form-label">Tag Source</label>
+        <select asp-for="SelectedTagSource"
+                asp-items="@(new SelectList(Model.TagDataSource))"
+                class="form-select">
+            <option value="">-- Select a tag source --</option>
+        </select>
+        <span asp-validation-for="SelectedTagSource" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Ask</button>
+    <a asp-action="Upload" class="btn btn-outline-secondary ms-2e">Go to Upload</a>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-danger">
+        <strong>Error:</strong> @Model.Error
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Answer))
+{
+    <div class="card">
+        <div class="card-header">Answer</div>
+        <div class="card-body">
+            @Html.Raw(Model.Answer)
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        $("#Question").on("keydown", function (e) {
+            if (e.which === 13 && !e.shiftKey) {
+                e.preventDefault();
+                $(this).closest("form").submit();
+            }
+        });
+    </script>
+}

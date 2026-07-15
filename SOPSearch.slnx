@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SOPSearch.API/SOPSearch.API.csproj" />
+  <Project Path="SOPSearch.Bot/SOPSearch.Bot.csproj" Id="7d71216e-2159-44a1-831b-611ec3df4700" />
+  <Project Path="SOPSearch.Models/SOPSearch.Models.csproj" Id="45c8d2e3-a38a-4e9a-a74f-1d2e1e1b5611" />
+  <Project Path="SOPSearch.Web/SOPSearch.Web.csproj" Id="e9b6f9ab-2155-42de-ab1d-4f5ffaae667a" />
+</Solution>

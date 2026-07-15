@@ -1,0 +1,115 @@
+﻿@model DocumentViewModel
+
+@{
+    ViewData["Title"] = "View All";
+}
+
+<style>
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+    }
+
+    .modal-box {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 8px;
+        max-width: 400px;
+        width: 90%;
+    }
+
+    .tag {
+        display: inline-block;
+        background: #e9ecef;
+        padding: 4px 8px;
+        margin: 3px;
+        border-radius: 5px;
+    }
+</style>
+
+<h1 class="mb-3">View All</h1>
+
+@if (Model.Documents?.Count > 0)
+{
+    <div class="row">
+        <h5 class="col-12 col-xs-12 col-sm-12 col-md-6 col-lg-4 col-xl-4">@Html.DisplayNameFor(model => model.Documents!.First().SOPName)</h5>
+        <h5 class="col-12 col-xs-12 col-sm-12 col-md-6 col-lg-6 col-xl-5">@Html.DisplayNameFor(model => model.Documents!.First().DocLibLocation)</h5>
+        <h5 class="col-12 col-xs-12 col-sm-12 col-md-6 col-lg-2 col-xl-1">@Html.DisplayNameFor(model => model.Documents!.First().IndexCount)</h5>
+        <h5 class="col-12 col-xs-12 col-sm-12 col-md-6 col-lg-2 col-xl-2"></h5>
+    </div>
+    @foreach (var item in Model.Documents!)
+    {
+        <div class="row document-row" style="cursor:pointer;">
+            <div class="hidden-tags" style="display : none">
+                @foreach (var tag in item.Tags)
+                {
+                    <span class="tag">@tag</span>
+                }
+            </div>
+            <span class="col-12 col-xs-12 col-sm-12 col-md-6 col-lg-4 col-xl-4 ">@Html.DisplayFor(modelItem => item.SOPName)</span>
+            <span class="col-12 col-xs-12 col-sm-12 col-md-6 col-lg-6 col-xl-5 ">@Html.DisplayFor(modelItem => item.DocLibLocation)</span>
+            <span class="col-12 col-xs-12 col-sm-12 col-md-6 col-lg-2 col-xl-1 ">@Html.DisplayFor(modelItem => item.IndexCount)</span>
+            <span class="col-12 col-xs-12 col-sm-12 col-md-6 col-lg-2 col-xl-2 no-click">
+                <form asp-action="ViewAll" method="post" asp-route-sopName="@item.SOPName">
+                    <button onsubmit="return confirm('Delete @item.SOPName?');">Delete</button>
+                </form>
+            </span>
+        </div>
+    }
+
+    <div id="tagModal" class="modal-overlay">
+        <div class="modal-box">
+            <h5>Tags</h5>
+            <div id="modalContent"></div>
+
+            <button class="btn btn-secondary mt-3" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-danger">
+        <strong>Error:</strong> @Model.Error
+    </div>
+}
+
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.document-row').forEach(row => {
+                row.addEventListener('click', (e) => {
+
+                    if (e.target.closest('.no-click')) {
+                        return;
+                    }
+
+                    const tags = row.querySelectorAll('.hidden-tags .tag');
+                    const modalContent = document.getElementById('modalContent');
+
+                    modalContent.innerHTML = '';
+
+                    tags.forEach(tag => {
+                        const span = document.createElement('span');
+                        span.className = 'tag';
+                        span.textContent = tag.textContent;
+                        modalContent.appendChild(span);
+                    });
+
+                    document.getElementById('tagModal').style.display = 'flex';
+                });
+            });
+        });
+
+        function closeModal() {
+            document.getElementById('tagModal').style.display = 'none';
+        }
+
+    </script>
+}
