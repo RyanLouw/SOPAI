@@ -21,8 +21,19 @@ namespace SOPSearch.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> SelectIndex(CancellationToken ct)
         {
-            List<string> tags = await _api.GetAllTags(ct) ?? new List<string>();
-            return View(new SelectIndexViewModel { Indexes = tags });
+            var vm = new SelectIndexViewModel();
+
+            try
+            {
+                vm.Indexes = await _api.GetAllTags(ct) ?? new List<string>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unable to load search indexes.");
+                ModelState.AddModelError(string.Empty, "We could not load the available indexes. Please try again.");
+            }
+
+            return View(vm);
         }
 
         [HttpPost]
@@ -31,7 +42,16 @@ namespace SOPSearch.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                vm.Indexes = await _api.GetAllTags(ct) ?? new List<string>();
+                try
+                {
+                    vm.Indexes = await _api.GetAllTags(ct) ?? new List<string>();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unable to load search indexes.");
+                    ModelState.AddModelError(string.Empty, "We could not load the available indexes. Please try again.");
+                }
+
                 return View(vm);
             }
 

@@ -18,12 +18,19 @@ namespace SOPSearch.Web.Services
         public async Task<List<string>?> GetAllTags(CancellationToken ct = default)
         {
             using var resp = await _http.GetAsync("api/Search/GetAllTags", ct);
-            var body = await resp.Content.ReadFromJsonAsync<List<string>>(ct);
+            var body = await resp.Content.ReadAsStringAsync(ct);
 
             if (!resp.IsSuccessStatusCode)
                 throw new Exception($"ERROR ({(int)resp.StatusCode}): {body}");
 
-            return body;
+            try
+            {
+                return JsonSerializer.Deserialize<List<string>>(body, _jsonOptions) ?? new List<string>();
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException("The Search API returned an invalid index list.", ex);
+            }
         }
 
         public async Task<string> AskChatAsync(string question, string? tag, CancellationToken ct = default)
