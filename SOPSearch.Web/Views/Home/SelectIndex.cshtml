@@ -1,0 +1,31 @@
+@model SOPSearch.Web.Models.SelectIndexViewModel
+
+@{
+    ViewData["Title"] = "Select an index";
+}
+
+<section class="index-selection" aria-labelledby="select-index-title">
+    <div class="index-selection__card">
+        <p class="index-selection__eyebrow">SOP Search</p>
+        <h1 id="select-index-title">Choose an index</h1>
+        <p class="text-muted mb-4">Select the SOP index you want to ask questions about. Your answers will use information from that index only.</p>
+
+        <form asp-action="SelectIndex" method="post">
+            <div class="mb-4">
+                <label asp-for="SelectedTagSource" class="form-label"></label>
+                <select asp-for="SelectedTagSource"
+                        asp-items="@(new SelectList(Model.Indexes))"
+                        class="form-select form-select-lg">
+                    <option value="">-- Select an index --</option>
+                </select>
+                <span asp-validation-for="SelectedTagSource" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100">Continue to chat</button>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

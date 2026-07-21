@@ -1,60 +1,130 @@
-﻿@model SOPSearch.Web.Models.ChatViewModel
+@model SOPSearch.Web.Models.ChatViewModel
 
 @{
     ViewData["Title"] = "Chat";
 }
 
-<h1 class="mb-3">Chat</h1>
-@Html.AntiForgeryToken()
+<section class="chat-page" aria-labelledby="chat-title">
+    <header class="chat-page__header">
+        <div>
+            <p class="chat-page__eyebrow">Selected index</p>
+            <h1 id="chat-title">@Model.SelectedTagSource</h1>
+        </div>
+        <a asp-action="SelectIndex" class="btn btn-outline-secondary">Change index</a>
+    </header>
 
-<form asp-action="Chat" method="post" class="mb-4 mb-3">
-        
-    <div class="mb-3">
-        <label asp-for="Question" class="form-label"></label>
-        <textarea asp-for="Question" class="form-control" rows="4"></textarea>
-        <span asp-validation-for="Question" class="text-danger"></span>
-    </div>
-
-    <div class="mb-3">
-        <label asp-for="SelectedTagSource" class="form-label">Tag Source</label>
-        <select asp-for="SelectedTagSource"
-                asp-items="@(new SelectList(Model.TagDataSource))"
-                class="form-select">
-            <option value="">-- Select a tag source --</option>
-        </select>
-        <span asp-validation-for="SelectedTagSource" class="text-danger"></span>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Ask</button>
-    <a asp-action="Upload" class="btn btn-outline-secondary ms-2e">Go to Upload</a>
-</form>
-
-@if (!string.IsNullOrWhiteSpace(Model.Error))
-{
-    <div class="alert alert-danger">
-        <strong>Error:</strong> @Model.Error
-    </div>
-}
-
-@if (!string.IsNullOrWhiteSpace(Model.Answer))
-{
-    <div class="card">
-        <div class="card-header">Answer</div>
-        <div class="card-body">
-            @Html.Raw(Model.Answer)
+    <div id="chatMessages" class="chat-messages" aria-live="polite" aria-label="Chat messages">
+        <div class="chat-message chat-message--assistant">
+            <div class="chat-message__bubble">Hi! Ask me anything about the <strong>@Model.SelectedTagSource</strong> index.</div>
         </div>
     </div>
-}
+
+    <div id="chatError" class="alert alert-danger d-none mt-3" role="alert"></div>
+
+    <form id="chatForm" asp-action="AskChat" method="post" class="chat-composer">
+        <input asp-for="SelectedTagSource" type="hidden" />
+        <div class="input-group">
+            <textarea asp-for="Question" class="form-control" rows="1" placeholder="Ask a question..." aria-label="Your question"></textarea>
+            <button id="sendButton" type="submit" class="btn btn-primary">Send</button>
+        </div>
+        <small id="chatStatus" class="text-muted">Press Enter to send. Use Shift + Enter for a new line.</small>
+    </form>
+</section>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-
     <script>
-        $("#Question").on("keydown", function (e) {
-            if (e.which === 13 && !e.shiftKey) {
-                e.preventDefault();
-                $(this).closest("form").submit();
-            }
-        });
+        (() => {
+            const form = document.getElementById("chatForm");
+            const question = document.getElementById("Question");
+            const sendButton = document.getElementById("sendButton");
+            const messages = document.getElementById("chatMessages");
+            const error = document.getElementById("chatError");
+            const status = document.getElementById("chatStatus");
+            let waitingForAnswer = false;
+
+            const scrollToLatest = () => messages.scrollTop = messages.scrollHeight;
+
+            const addMessage = (content, role) => {
+                const message = document.createElement("div");
+                message.className = `chat-message chat-message--${role}`;
+                const bubble = document.createElement("div");
+                bubble.className = "chat-message__bubble";
+
+                if (role === "assistant") {
+                    bubble.innerHTML = content;
+                } else {
+                    bubble.textContent = content;
+                }
+
+                message.appendChild(bubble);
+                messages.appendChild(message);
+                scrollToLatest();
+                return message;
+            };
+
+            const addTypingIndicator = () => {
+                const message = document.createElement("div");
+                message.className = "chat-message chat-message--assistant";
+                message.setAttribute("aria-label", "Assistant is typing");
+                message.innerHTML = '<div class="chat-message__bubble chat-typing"><span></span><span></span><span></span></div>';
+                messages.appendChild(message);
+                scrollToLatest();
+                return message;
+            };
+
+            const setWaitingState = (isWaiting) => {
+                waitingForAnswer = isWaiting;
+                question.disabled = isWaiting;
+                sendButton.disabled = isWaiting;
+                status.textContent = isWaiting
+                    ? "Looking through the selected index..."
+                    : "Press Enter to send. Use Shift + Enter for a new line.";
+            };
+
+            form.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                if (waitingForAnswer) return;
+
+                const questionText = question.value.trim();
+                if (!questionText) {
+                    question.focus();
+                    return;
+                }
+
+                error.classList.add("d-none");
+                addMessage(questionText, "user");
+                question.value = "";
+                setWaitingState(true);
+                const typingIndicator = addTypingIndicator();
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: "POST",
+                        body: new FormData(form),
+                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok) throw new Error(result.error || "We could not get an answer. Please try again.");
+
+                    typingIndicator.remove();
+                    addMessage(result.answer, "assistant");
+                } catch (requestError) {
+                    typingIndicator.remove();
+                    error.textContent = requestError.message;
+                    error.classList.remove("d-none");
+                } finally {
+                    setWaitingState(false);
+                    question.focus();
+                }
+            });
+
+            question.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    form.requestSubmit();
+                }
+            });
+        })();
     </script>
 }

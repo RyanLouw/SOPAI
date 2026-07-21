@@ -8,6 +8,7 @@ namespace SOPSearch.Web.Models
         [Display(Name = "Question")]
         public string Question { get; set; } = "";
 
+        [Required]
         public string? SelectedTagSource { get; set; }
 
         public List<string> TagDataSource { get; set; } = new();
