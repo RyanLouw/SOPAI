@@ -168,18 +168,23 @@ namespace SOPSearch.API.Services
 
         public async Task CleanIndex(CancellationToken ct)
         {
-            var response = await _searchClient.SearchAsync<SearchDocument>("*", new SearchOptions() { Size = 5 }, cancellationToken: ct);
-            var results = response.Value.GetResultsAsync();
-
-            if (await results.AnyAsync())
+            while (true)
             {
-                do
-                {
-                    await _searchClient.DeleteDocumentsAsync("id", await results.Select(x => (string)x.Document["id"]).ToListAsync(), cancellationToken: ct);
+                var options = new SearchOptions { Size = 1000 };
+                options.Select.Add("id");
 
-                    response = await _searchClient.SearchAsync<SearchDocument>("*", new SearchOptions() { Size = 5 }, cancellationToken: ct);
-                    results = response.Value.GetResultsAsync();
-                } while (false);
+                var response = await _searchClient.SearchAsync<SearchDocument>("*", options, cancellationToken: ct);
+                var documentIds = new List<string>();
+
+                await foreach (SearchResult<SearchDocument> result in response.Value.GetResultsAsync())
+                {
+                    documentIds.Add((string)result.Document["id"]);
+                }
+
+                if (documentIds.Count == 0)
+                    return;
+
+                await _searchClient.DeleteDocumentsAsync("id", documentIds, cancellationToken: ct);
             }
         }
     }

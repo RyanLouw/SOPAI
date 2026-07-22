@@ -17,43 +17,81 @@ namespace SOPSearch.Web.Controllers
             _api = api;
         }
 
-        // --- CHAT ---
+        // --- INDEX SELECTION ---
         [HttpGet]
-        public async Task<IActionResult> Chat()
+        public async Task<IActionResult> SelectIndex(CancellationToken ct)
         {
-            List<string> tags = await _api.GetAllTags() ?? new List<string>();
-            return View(new ChatViewModel() { TagDataSource = tags });
+            var vm = new SelectIndexViewModel();
+
+            try
+            {
+                vm.Indexes = await _api.GetAllTags(ct) ?? new List<string>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unable to load search indexes.");
+                ModelState.AddModelError(string.Empty, "We could not load the available indexes. Please try again.");
+            }
+
+            return View(vm);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Chat(ChatViewModel vm, CancellationToken ct)
+        public async Task<IActionResult> SelectIndex(SelectIndexViewModel vm, CancellationToken ct)
         {
             if (!ModelState.IsValid)
+            {
+                try
+                {
+                    vm.Indexes = await _api.GetAllTags(ct) ?? new List<string>();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unable to load search indexes.");
+                    ModelState.AddModelError(string.Empty, "We could not load the available indexes. Please try again.");
+                }
+
                 return View(vm);
+            }
+
+            return RedirectToAction(nameof(Chat), new { selectedTagSource = vm.SelectedTagSource });
+        }
+
+        // --- CHAT ---
+        [HttpGet]
+        public IActionResult Chat(string? selectedTagSource)
+        {
+            if (string.IsNullOrWhiteSpace(selectedTagSource))
+                return RedirectToAction(nameof(SelectIndex));
+
+            return View(new ChatViewModel { SelectedTagSource = selectedTagSource });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AskChat(ChatViewModel vm, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new { error = "Please enter a question before sending it." });
 
             try
             {
-                vm.Answer = await _api.AskChatAsync(vm.Question, vm.SelectedTagSource, ct);
-                if (vm.Answer.StartsWith("ERROR"))
+                string answer = await _api.AskChatAsync(vm.Question, vm.SelectedTagSource, ct);
+                if (answer.StartsWith("ERROR"))
                 {
-                    _logger.LogError(vm.Answer);
-                    vm.Error = vm.Answer;
-                    vm.Answer = "";
+                    _logger.LogError(answer);
+                    return BadRequest(new { error = answer });
                 }
-                else
-                {
-                    List<string> tags = await _api.GetAllTags() ?? new List<string>();
-                    vm.TagDataSource = tags;
-                }
+
+                return Json(new { answer });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
-                vm.Error = ex.Message;
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { error = "We could not get an answer. Please try again." });
             }
-
-            return View(vm);
         }
 
         // --- UPLOAD ---
